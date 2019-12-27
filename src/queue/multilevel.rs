@@ -438,7 +438,7 @@ pub struct Builder {
 
 impl Builder {
     /// Creates a multilevel task queue builder from the config.
-    pub fn new(config: Config) -> Builder {
+    pub fn new(config: &Config) -> Builder {
         let manager = Arc::new(LevelManager {
             level0_elapsed: Default::default(),
             total_elapsed: Default::default(),
@@ -618,7 +618,7 @@ mod tests {
     fn test_schedule_time_is_set() {
         const SLEEP_DUR: Duration = Duration::from_millis(5);
 
-        let builder = Builder::new(Config::default());
+        let builder = Builder::new(&Config::default());
         let (injector, mut locals) = builder.build(1);
         injector.push(MockTask::new(0, Extras::multilevel_default()));
         thread::sleep(SLEEP_DUR);
@@ -629,7 +629,7 @@ mod tests {
     #[test]
     fn test_push_task() {
         let builder = Builder::new(
-            Config::default()
+            &Config::default()
                 .level_time_threshold([Duration::from_millis(1), Duration::from_millis(100)]),
         );
         let (injector, _) = builder.build_raw(1);
@@ -702,7 +702,7 @@ mod tests {
 
     #[test]
     fn test_pop_by_stealing_injector() {
-        let builder = Builder::new(Config::default());
+        let builder = Builder::new(&Config::default());
         let (injector, mut locals) = builder.build(3);
         for i in 0..100 {
             injector.push(MockTask::new(i, Extras::multilevel_default()));
@@ -716,7 +716,7 @@ mod tests {
 
     #[test]
     fn test_pop_by_steal_others() {
-        let builder = Builder::new(Config::default());
+        let builder = Builder::new(&Config::default());
         let (injector, mut locals) = builder.build_raw(3);
         for i in 0..50 {
             injector.push(MockTask::new(i, Extras::multilevel_default()));
@@ -739,7 +739,7 @@ mod tests {
 
     #[test]
     fn test_pop_concurrently() {
-        let builder = Builder::new(Config::default());
+        let builder = Builder::new(&Config::default());
         let (injector, locals) = builder.build(3);
         for i in 0..10_000 {
             injector.push(MockTask::new(i, Extras::multilevel_default()));
@@ -764,7 +764,7 @@ mod tests {
 
     #[test]
     fn test_runner_records_handle_time() {
-        let builder = Builder::new(Config::default());
+        let builder = Builder::new(&Config::default());
         let mut runner_builder = builder.runner_builder(MockRunnerBuilder);
         let mut injector_clone: Option<QueueInjector<MockTask>> = None;
         let injector_ref = &mut injector_clone;
@@ -802,7 +802,7 @@ mod tests {
     #[test]
     fn test_adjust_level_chance() {
         // Default level 0 target is 0.8
-        let manager = Builder::new(Config::default()).manager;
+        let manager = Builder::new(&Config::default()).manager;
 
         // Level 0 running time is lower than expected, level0_chance should
         // increase.

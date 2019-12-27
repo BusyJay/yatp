@@ -13,24 +13,30 @@ pub enum Task {
     Mut(Box<dyn FnMut(&mut Handle<'_>) + Send>),
 }
 
-impl Task {
-    /// Creates a [`FnOnce`] task.
-    pub fn new_once(t: impl FnOnce(&mut Handle<'_>) + Send + 'static) -> Self {
-        Task::Once(Box::new(t))
-    }
-
-    /// Creates a [`FnMut`] task.
-    pub fn new_mut(t: impl FnMut(&mut Handle<'_>) + Send + 'static) -> Self {
-        Task::Mut(Box::new(t))
-    }
-}
-
 /// The task cell for callback tasks.
 pub struct TaskCell {
     /// The callback task.
     pub task: Task,
     /// Extra information about the task.
     pub extras: Extras,
+}
+
+impl TaskCell {
+    /// Creates a [`FnOnce`] task.
+    pub fn new_once(t: impl FnOnce(&mut Handle<'_>) + Send + 'static, extras: Extras) -> Self {
+        TaskCell {
+            task: Task::Once(Box::new(t)),
+            extras,
+        }
+    }
+
+    /// Creates a [`FnMut`] task.
+    pub fn new_mut(t: impl FnMut(&mut Handle<'_>) + Send + 'static, extras: Extras) -> Self {
+        TaskCell {
+            task: Task::Mut(Box::new(t)),
+            extras,
+        }
+    }
 }
 
 impl crate::queue::TaskCell for TaskCell {
@@ -45,7 +51,7 @@ where
 {
     fn from(f: F) -> TaskCell {
         TaskCell {
-            task: Task::new_once(f),
+            task: Task::Once(Box::new(f)),
             extras: Extras::simple_default(),
         }
     }
@@ -64,7 +70,7 @@ impl<'a> Handle<'a> {
     /// Spawns a [`FnOnce`] to the thread pool.
     pub fn spawn_once(&mut self, t: impl FnOnce(&mut Handle<'_>) + Send + 'static, extras: Extras) {
         self.local.spawn(TaskCell {
-            task: Task::new_once(t),
+            task: Task::Once(Box::new(t)),
             extras,
         });
     }
@@ -72,7 +78,7 @@ impl<'a> Handle<'a> {
     /// Spawns a [`FnMut`] to the thread pool.
     pub fn spawn_mut(&mut self, t: impl FnMut(&mut Handle<'_>) + Send + 'static, extras: Extras) {
         self.local.spawn(TaskCell {
-            task: Task::new_mut(t),
+            task: Task::Mut(Box::new(t)),
             extras,
         });
     }
@@ -167,12 +173,12 @@ mod tests {
         let (tx, rx) = mpsc::channel();
         runner.handle(
             &mut locals[0],
-            TaskCell {
-                task: Task::new_once(move |_| {
+            TaskCell::new_once(
+                move |_| {
                     tx.send(42).unwrap();
-                }),
-                extras: Extras::simple_default(),
-            },
+                },
+                Extras::simple_default(),
+            ),
         );
         assert_eq!(rx.recv().unwrap(), 42);
     }
@@ -186,16 +192,16 @@ mod tests {
         let mut times = 0;
         runner.handle(
             &mut locals[0],
-            TaskCell {
-                task: Task::new_mut(move |handle| {
+            TaskCell::new_mut(
+                move |handle| {
                     tx.send(42).unwrap();
                     times += 1;
                     if times < 2 {
                         handle.set_rerun(true);
                     }
-                }),
-                extras: Extras::simple_default(),
-            },
+                },
+                Extras::simple_default(),
+            ),
         );
         assert_eq!(rx.recv().unwrap(), 42);
         assert_eq!(rx.recv().unwrap(), 42);
@@ -212,16 +218,16 @@ mod tests {
         let mut times = 0;
         runner.handle(
             &mut locals[0],
-            TaskCell {
-                task: Task::new_mut(move |handle| {
+            TaskCell::new_mut(
+                move |handle| {
                     tx.send(42).unwrap();
                     times += 1;
                     if times < 3 {
                         handle.set_rerun(true);
                     }
-                }),
-                extras: Extras::simple_default(),
-            },
+                },
+                Extras::simple_default(),
+            ),
         );
         assert_eq!(rx.recv().unwrap(), 42);
         assert_eq!(rx.recv().unwrap(), 42);

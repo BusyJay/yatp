@@ -19,7 +19,7 @@ fn test_basic() {
     // Task should be executed immediately.
     let t = tx.clone();
     pool.spawn(move |_: &mut Handle<'_>| t.send(1).unwrap());
-    assert_eq!(Ok(1), rx.recv_timeout(Duration::from_millis(10)));
+    assert_eq!(Ok(1), rx.recv_timeout(Duration::from_millis(100)));
 
     // Tasks should be executed concurrently.
     let mut pairs = vec![];

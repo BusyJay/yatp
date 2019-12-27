@@ -14,3 +14,18 @@ parking_lot_core = "0.7"
 crossbeam-deque = "0.7"
 dashmap = "1.2.0"
 rand = "0.7"
+
+[dev-dependencies]
+tokio-threadpool = "0.1"
+futures-cpupool = "0.1"
+threadpool = "1.0"
+criterion = "0.3"
+futures = "0.1"
+
+[[bench]]
+name = "basic"
+harness = false
+
+[profile.bench]
+debug = true
+codegen-units = 1
